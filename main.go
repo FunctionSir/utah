@@ -2,7 +2,7 @@
  * @Author: FunctionSir
  * @License: AGPLv3
  * @Date: 2025-10-04 20:46:11
- * @LastEditTime: 2025-10-06 13:14:11
+ * @LastEditTime: 2025-10-06 15:47:46
  * @LastEditors: FunctionSir
  * @Description: -
  * @FilePath: /utah/main.go
@@ -187,10 +187,16 @@ func Preferences() {
 }
 
 func Add(manifest *Manifest) {
+	fmt.Println("Hint: enter ! only to cancel and drop current record in most cases.")
+	fmt.Println("Hint: \"! cancel\" is useless when entering tags, extra attributes or notes.")
 	for TapeID == "" {
 		TapeID = ReadNotEmpty("Input the ID (usually barcode) of target tape (scanner is recommended): ")
 		fmt.Println("Hint: use \"sudo sg_logs -p 0x31 /dev/(n)stX\" to view remaining capacity in MiB.")
 		tmp := PromptAndReadLine("Input the remaining capacity of the tape (in MiB): ")
+		if tmp == "!" {
+			fmt.Println("User dropped this record.")
+			return
+		}
 		tmpNum, err := strconv.Atoi(tmp)
 		if err != nil || tmpNum < 0 {
 			fmt.Println("Invalid capacity, please try again.")
@@ -200,6 +206,10 @@ func Add(manifest *Manifest) {
 	}
 	record := Record{CreatedAt: time.Now()}
 	record.Name = ReadNotEmpty("Archive name: ")
+	if record.Name == "!" {
+		fmt.Println("User dropped this record.")
+		return
+	}
 	record.Format = Format
 	record.ExtraAttributes = make(map[string]string)
 	record.Tags = make([]string, 0)
@@ -211,18 +221,34 @@ func Add(manifest *Manifest) {
 	fmt.Println("Now, you can gen the archive file using terminal below:")
 	GotoShell()
 	archivePath := ReadNotEmpty("Created archive file: ")
+	if archivePath == "!" {
+		fmt.Println("User dropped this record.")
+		return
+	}
 	for !strings.HasSuffix(archivePath, Format) {
 		fmt.Println("Format mismatch, might be a mistake, use terminal below to fix it:")
 		GotoShell()
 		archivePath = ReadNotEmpty("Created archive file: ")
+		if archivePath == "!" {
+			fmt.Println("User dropped this record.")
+			return
+		}
 	}
 	for !IsAFile(archivePath) {
 		fmt.Println("File seems not exists or is a dir, please retry.")
 		archivePath = ReadNotEmpty("Created archive file: ")
+		if archivePath == "!" {
+			fmt.Println("User dropped this record.")
+			return
+		}
 		for !strings.HasSuffix(archivePath, Format) {
 			fmt.Println("Format mismatch, might be a mistake, use terminal below to fix it:")
 			GotoShell()
 			archivePath = ReadNotEmpty("Created archive file: ")
+			if archivePath == "!" {
+				fmt.Println("User dropped this record.")
+				return
+			}
 		}
 	}
 
@@ -292,10 +318,18 @@ LoopCapTooSmall:
 		switch GetCommand() {
 		case "T":
 			TapeID = ReadNotEmpty("Input the ID (usually barcode) of target tape (scanner is recommended): ")
+			if TapeID == "!" {
+				fmt.Println("User dropped this record.")
+				return
+			}
 			TapeCapAvailMiB = -1
 			for TapeCapAvailMiB < 0 {
 				fmt.Println("Hint: use \"sudo sg_logs -p 0x31 /dev/(n)stX\" to view remaining capacity in MiB.")
 				tmp := PromptAndReadLine("Input the remaining capacity of the tape (in MiB): ")
+				if tmp == "!" {
+					fmt.Println("User dropped this record.")
+					return
+				}
 				tmpNum, err := strconv.Atoi(tmp)
 				if err != nil || tmpNum < 0 {
 					fmt.Println("Invalid capacity, please try again.")
@@ -303,7 +337,7 @@ LoopCapTooSmall:
 				}
 				TapeCapAvailMiB = int64(tmpNum)
 			}
-		case "D":
+		case "D", "!":
 			fmt.Println("User dropped this record.")
 			return
 		case "I":
@@ -316,6 +350,10 @@ LoopCapTooSmall:
 	fmt.Println("Hint: you can use \"sudo mt-st -f /dev/nstX status\" to see which file you are using now.")
 	for {
 		tmp := ReadNotEmpty("File index: ")
+		if tmp == "!" {
+			fmt.Println("User dropped this record.")
+			return
+		}
 		tmpNum, err := strconv.Atoi(tmp)
 		if err != nil {
 			fmt.Println("Invalid file index, try again.")
@@ -331,13 +369,17 @@ LoopCapTooSmall:
 	tmp := "NOTEMPTY"
 	for tmp != "" {
 		tmp = PromptAndReadLine("You can input \"$\" only to reopen shell, or use empty input to escape: ")
+		if tmp == "!" {
+			fmt.Println("User dropped this record.")
+			return
+		}
 	}
 	fmt.Println("Merge or drop this record? M to merge and D to drop.")
 LoopMergeOrDrop:
 	for {
 		tmp = GetCommand()
 		switch tmp {
-		case "D":
+		case "D", "!":
 			fmt.Println("User dropped this record.")
 			return
 		case "M":
