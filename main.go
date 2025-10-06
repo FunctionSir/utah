@@ -2,7 +2,7 @@
  * @Author: FunctionSir
  * @License: AGPLv3
  * @Date: 2025-10-04 20:46:11
- * @LastEditTime: 2025-10-06 20:39:10
+ * @LastEditTime: 2025-10-07 01:06:13
  * @LastEditors: FunctionSir
  * @Description: -
  * @FilePath: /utah/main.go
@@ -13,6 +13,7 @@ package main
 import (
 	"bufio"
 	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -33,7 +34,7 @@ const (
 
 const (
 	TapeSafetyMargin       int64 = 1 * 1024 * 1024 * 1024
-	PerFileSafetyMarginMiB int64 = 1 * 1024 * 1024
+	PerFileSafetyMarginMiB int64 = 1
 )
 
 const (
@@ -260,24 +261,49 @@ func Add(manifest *Manifest) {
 	}
 	record.Size = stat.Size()
 	fmt.Printf("Archive file %s has %d bytes.\n", archivePath, record.Size)
-	fmt.Println("Calculating SHA-256 sum for this file...")
-	f, err := os.Open(archivePath)
-	for err != nil {
-		fmt.Println("Can not open archive file, might be a mistake, use terminal below to fix it:")
-		GotoShell()
-		f, err = os.Open(archivePath)
+	fmt.Println("Input SHA-256 of this file or let it empty if you want to calculate it here.")
+	var inputedHash string
+	for {
+		inputedHash = PromptAndReadLine(">>> ")
+		inputedHash = strings.ToLower(inputedHash)
+		if len(inputedHash) != 64 && len(inputedHash) != 0 {
+			fmt.Println("Invalid input, try again.")
+			continue
+		}
+		_, err := hex.DecodeString(inputedHash)
+		if err != nil {
+			fmt.Println("Invalid input, try again.")
+			continue
+		}
+		break
 	}
-	defer func() { _ = f.Close() }()
-	hasher := sha256.New()
-	_, err = io.Copy(hasher, f)
-	for err != nil {
-		fmt.Println("Can not hash archive file, might be a mistake, use terminal below to fix it:")
-		GotoShell()
-		hasher = sha256.New()
+	if inputedHash == "" {
+		fmt.Println("Calculating SHA-256 sum for this file...")
+		f, err := os.Open(archivePath)
+		for err != nil {
+			fmt.Println("Can not open archive file, might be a mistake, use terminal below to fix it:")
+			GotoShell()
+			f, err = os.Open(archivePath)
+		}
+		defer func() { _ = f.Close() }()
+		hasher := sha256.New()
 		_, err = io.Copy(hasher, f)
+		for err != nil {
+			fmt.Println("Can not hash archive file, might be a mistake, use terminal below to fix it:")
+			GotoShell()
+			hasher = sha256.New()
+			_, err = f.Seek(0, io.SeekStart)
+			if err != nil {
+				fmt.Println("Record dropped since a critical error when calculating checksum.")
+				return
+			}
+			_, err = io.Copy(hasher, f)
+		}
+		record.Checksum = fmt.Sprintf("%x", hasher.Sum(nil))
+		fmt.Printf("SHA-256 sum of %s is %s.\n", archivePath, record.Checksum)
+	} else {
+		record.Checksum = inputedHash
 	}
-	record.Checksum = fmt.Sprintf("%x", hasher.Sum(nil))
-	fmt.Printf("SHA-256 sum of %s is %s.\n", archivePath, record.Checksum)
 	fmt.Println("You can add extra attributes, use empty key to terminate:")
 	for {
 		k := PromptAndReadLine("Key: ")
@@ -433,7 +459,7 @@ func SPrintCenterln(s string) string {
 func SPrintDoubleColsln(colA, colB string) string {
 	res := ""
 	res += fmt.Sprint(colA)
-	res += fmt.Sprint(strings.Repeat(" ", max(1, 80/2-StringWidth(colA))))
+	res += fmt.Sprint(strings.Repeat(" ", max(4, 80/2-StringWidth(colA))))
 	res += fmt.Sprintln(colB)
 	return res
 }
