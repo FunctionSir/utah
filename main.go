@@ -2,7 +2,7 @@
  * @Author: FunctionSir
  * @License: AGPLv3
  * @Date: 2025-10-04 20:46:11
- * @LastEditTime: 2025-10-06 15:47:46
+ * @LastEditTime: 2025-10-06 20:39:10
  * @LastEditors: FunctionSir
  * @Description: -
  * @FilePath: /utah/main.go
@@ -32,8 +32,8 @@ const (
 )
 
 const (
-	TapeSafetyMargin    int64 = 1 * 1024 * 1024 * 1024
-	PerFileSafetyMargin int64 = 1 * 1024 * 1024
+	TapeSafetyMargin       int64 = 1 * 1024 * 1024 * 1024
+	PerFileSafetyMarginMiB int64 = 1 * 1024 * 1024
 )
 
 const (
@@ -312,7 +312,7 @@ func Add(manifest *Manifest) {
 		record.Notes = append(record.Notes, note)
 	}
 LoopCapTooSmall:
-	for record.Size+PerFileSafetyMargin >= TapeCapAvailMiB*1024*1024-TapeSafetyMargin {
+	for record.Size+PerFileSafetyMarginMiB*1024*1024 >= TapeCapAvailMiB*1024*1024-TapeSafetyMargin {
 		fmt.Println("It's not safe to write this archive into current tape.")
 		fmt.Println("Input \"T\" to change tape, \"I\" to ignore, \"D\" to drop this record, \"$\" to get shell.")
 		switch GetCommand() {
@@ -388,7 +388,7 @@ LoopMergeOrDrop:
 			fmt.Println("Unknown choice, try again.")
 		}
 	}
-	TapeCapAvailMiB -= int64(math.Ceil(float64(record.Size)/1024/1024)) + PerFileSafetyMargin
+	TapeCapAvailMiB -= int64(math.Ceil(float64(record.Size)/1024/1024)) + PerFileSafetyMarginMiB
 	manifest.Records = append(manifest.Records, record)
 }
 
