@@ -2,7 +2,7 @@
  * @Author: FunctionSir
  * @License: AGPLv3
  * @Date: 2025-10-04 20:46:11
- * @LastEditTime: 2025-10-07 01:06:13
+ * @LastEditTime: 2025-10-07 21:41:39
  * @LastEditors: FunctionSir
  * @Description: -
  * @FilePath: /utah/main.go
@@ -33,7 +33,7 @@ const (
 )
 
 const (
-	TapeSafetyMargin       int64 = 1 * 1024 * 1024 * 1024
+	TapeSafetyMargin       int64 = 18 * 1024 * 1024 * 1024
 	PerFileSafetyMarginMiB int64 = 1
 )
 
